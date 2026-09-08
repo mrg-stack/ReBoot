@@ -13,9 +13,9 @@ export QT_AUTO_SCREEN_SCALE_FACTOR="${QT_AUTO_SCREEN_SCALE_FACTOR:-1}"
 
 cd "${PROJECT_ROOT}"
 
-if [[ ! -x "${PROJECT_ROOT}/venv/bin/python" ]]; then
-  echo "Missing virtual environment interpreter: ${PROJECT_ROOT}/venv/bin/python" >&2
+if [[ ! -x "${PROJECT_ROOT}/.venv/bin/python" ]]; then
+  echo "Missing virtual environment interpreter: ${PROJECT_ROOT}/.venv/bin/python" >&2
   exit 1
 fi
 
-exec "${PROJECT_ROOT}/venv/bin/python" "${PROJECT_ROOT}/app/main.py"
+exec "${PROJECT_ROOT}/.venv/bin/python" "${PROJECT_ROOT}/app/main.py"

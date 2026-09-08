@@ -87,8 +87,8 @@ ReBoot/
 ### 1. Create and activate a virtual environment
 
 ```bash
-python -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
 ### 2. Install dependencies
@@ -147,7 +147,7 @@ use the deployment files under `deploy/`.
 ### Prerequisites
 
 - A desktop session that auto-logs into your kiosk user.
-- Python virtual environment already created at `venv/`.
+- Python virtual environment already created at `.venv/`.
 - Dependencies installed with `pip install -r requirements.txt`.
 
 ### Install kiosk startup (user-level)
