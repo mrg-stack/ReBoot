@@ -60,8 +60,10 @@ class RecommendationScreen(QWidget):
         advanced_desc.setAlignment(Qt.AlignCenter)
         advanced_desc.setStyleSheet(f"font-size: 13px; color: {TEXT_COLOR};")
 
-        self.erase_only_radio = QRadioButton("Secure erase only (no OS installation)")
-        erase_only_desc = QLabel("Erase data and generate certificate only. No operating system will be installed.")
+        self.erase_only_radio = QRadioButton("Erasure analysis only (no OS installation)")
+        erase_only_desc = QLabel(
+            "Record the requested erase method and generate a hardware report; no erasure is executed."
+        )
         erase_only_desc.setAlignment(Qt.AlignCenter)
         erase_only_desc.setStyleSheet(f"font-size: 13px; color: {TEXT_COLOR};")
 
@@ -101,8 +103,10 @@ class RecommendationScreen(QWidget):
         if self.erase_only_radio.isChecked():
             self.selected_distro = "none"
             self.install_os = False
-            self.suggestion.setText("You selected Secure erase only")
-            self.confirmation_label.setText("Great, we'll erase the device and skip OS installation.")
+            self.suggestion.setText("You selected erasure analysis only")
+            self.confirmation_label.setText(
+                "We'll generate an analysis report and skip OS installation; no erasure is executed."
+            )
             return
 
         if self.advanced_radio.isChecked():

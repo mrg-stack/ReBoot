@@ -3,13 +3,24 @@
 # Current behavior:
 # - captures wipe preference and irreversible-action consent
 # - records the chosen mode in memory
-# - generates a simulated certificate document
+# - generates a factual hardware analysis report
 #
 # No destructive disk operation is performed in this build.
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QCheckBox, QComboBox, QLabel, QLineEdit, QPushButton, QRadioButton, QVBoxLayout, QWidget
-from services.certificate import generate_erase_certificate, open_certificate
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QRadioButton,
+    QVBoxLayout,
+    QWidget,
+)
+from services.certificate import generate_erase_certificate, generate_hardware_report, open_certificate
+from services.hardware_report import UnsupportedPlatformError
 from ui.ui_config import apply_window_mode, PRIMARY_COLOR, ACCENT_COLOR, TEXT_COLOR
 
 
@@ -36,22 +47,24 @@ class SecureEraseScreen(QWidget):
         title.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {PRIMARY_COLOR};")
 
         explanation = QLabel(
-            "Before installing a new operating system, ReBoot will erase all data on the main disk.\n"
-            "This helps protect personal data, prevent recovery of previous information, and prepare the device for safe reuse."
+            "Select the erasure method that a future backend should use.\n"
+            "This build analyzes hardware and records the request; it does not erase any disk."
         )
         explanation.setWordWrap(True)
         explanation.setAlignment(Qt.AlignCenter)
         explanation.setStyleSheet(f"font-size: 14px; color: {TEXT_COLOR};")
 
-        warning = QLabel("Warning: this process is irreversible. All existing files and accounts will be permanently removed.")
+        warning = QLabel(
+            "Analysis only: no erasure is performed, and the generated report is not proof of data sanitization."
+        )
         warning.setWordWrap(True)
         warning.setAlignment(Qt.AlignCenter)
         warning.setStyleSheet(f"font-size: 13px; color: {ACCENT_COLOR};")
 
         post_wipe_note = QLabel(
-            "After erase: OS installation is enabled."
+            "After analysis: OS installation is planned but not started by this step."
             if self.install_os
-            else "After erase: OS installation is skipped (erase only mode)."
+            else "After analysis: OS installation is skipped."
         )
         post_wipe_note.setWordWrap(True)
         post_wipe_note.setAlignment(Qt.AlignCenter)
@@ -81,15 +94,15 @@ class SecureEraseScreen(QWidget):
         secure_desc.setStyleSheet(f"font-size: 13px; color: {TEXT_COLOR};")
 
         compliance_note = QLabel(
-            "For GDPR-style compliance, choose Secure erase: it is intended to render data irrecoverable and "
-            "supports accountable erasure workflows, including certificate-ready reporting."
+            "Secure erase is the recommended future method for sensitive data. "
+            "The current analysis report does not establish GDPR compliance."
         )
         compliance_note.setWordWrap(True)
         compliance_note.setAlignment(Qt.AlignCenter)
         compliance_note.setStyleSheet(f"font-size: 13px; color: {PRIMARY_COLOR};")
 
         # Collect report metadata from the operator before certificate generation.
-        metadata_title = QLabel("Certificate details")
+        metadata_title = QLabel("Report details")
         metadata_title.setAlignment(Qt.AlignCenter)
         metadata_title.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {PRIMARY_COLOR};")
 
@@ -112,7 +125,9 @@ class SecureEraseScreen(QWidget):
             ]
         )
 
-        self.confirm_checkbox = QCheckBox("I understand that all data will be permanently deleted")
+        self.confirm_checkbox = QCheckBox(
+            "I understand that this build records the request but does not erase data"
+        )
         self.confirm_checkbox.setStyleSheet("font-size: 13px;")
 
         self.continue_btn = QPushButton("Continue")
@@ -125,7 +140,7 @@ class SecureEraseScreen(QWidget):
         back_btn.clicked.connect(self.go_back)
 
         # Form controls update state continuously; continue button stays locked
-        # until user explicitly confirms destructive intent.
+        # until the user acknowledges the analysis-only behavior.
         self.quick_radio.toggled.connect(self.update_wipe_method)
         self.secure_radio.toggled.connect(self.update_wipe_method)
         self.confirm_checkbox.toggled.connect(self.update_confirmation_state)
@@ -171,7 +186,7 @@ class SecureEraseScreen(QWidget):
         self.close()
 
     def continue_clicked(self):
-        # Handle continue after confirmation and trigger POC wipe path.
+        # Handle continue after acknowledgement and generate the report.
         if not self.confirmed:
             return
 
@@ -180,17 +195,16 @@ class SecureEraseScreen(QWidget):
         self.perform_wipe()
 
     def perform_wipe(self):
-        # POC wipe implementation.
+        # Analysis-only milestone.
         #
         # This intentionally does not touch block devices yet. It validates
-        # flow and produces a certificate artifact while backend erase logic
+        # flow and produces a factual report artifact while backend erase logic
         # is built separately.
         # TODO: detect drive type (HDD/SSD/NVMe) and choose method accordingly.
         # Quick path target: verified single-pass overwrite for HDD media.
         # Secure path target: firmware-level erase for SSD/NVMe (ATA Secure Erase / NVMe Sanitize).
-        # TODO: write an auditable erasure report and support certificate generation.
         # This POC intentionally performs no destructive action.
-        print("Secure erase is not executed in this POC build.")
+        print("Hardware analysis only; secure erase is not executed in this build.")
 
         report_metadata = {
             "asset_id": self.asset_id_input.text().strip(),
@@ -198,6 +212,15 @@ class SecureEraseScreen(QWidget):
             "chassis_type": self.chassis_type_combo.currentText().strip(),
         }
 
-        certificate_path = generate_erase_certificate(self.wipe_method, report_metadata)
-        print(f"Certificate generated: {certificate_path}")
-        open_certificate(certificate_path)
+        report_generator = generate_hardware_report if self.install_os else generate_erase_certificate
+        try:
+            report_path = report_generator(self.wipe_method, report_metadata)
+        except UnsupportedPlatformError as error:
+            QMessageBox.critical(
+                self,
+                "Hardware report unavailable",
+                str(error),
+            )
+            return
+        print(f"Hardware analysis report generated: {report_path}")
+        open_certificate(report_path)

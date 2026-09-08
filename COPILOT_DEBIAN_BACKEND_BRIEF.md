@@ -11,16 +11,25 @@ ReBoot is a PySide6 desktop proof-of-concept with a guided flow:
 2. Hardware analysis
 3. Recommendation and user choice (Mint, Debian, or erase-only)
 4. Secure erase confirmation
-5. Certificate generation (currently simulated)
+5. Hardware analysis report generation (analysis only; erasure is not executed)
 
 The current app is mostly UI + placeholders. The backend that performs actual Debian boot-device preparation is not implemented yet.
+
+## Supported Production Platform
+The production runtime and hardware-report target is exclusively
+**PC-compatible x86-64/amd64 Linux**. Unsupported operating systems and CPU
+architectures must fail closed with an explicit error before hardware probing
+or installer operations. macOS is permitted only as a development host for
+editing and for running an x86-64 Linux guest in QEMU; it is not a supported
+ReBoot runtime or hardware-report target.
 
 ## Existing Repository Structure (Important)
 - app/main.py: Qt entrypoint.
 - app/ui/: UI screens and wrappers.
 - app/core/: screen logic and transitions.
 - app/services/system_info.py: hardware collection.
-- app/services/certificate.py: simulated erase certificate PDF generation.
+- app/services/certificate.py: one-page analysis-only PDF rendering.
+- app/services/hardware_report.py: factual PC x86-64 Linux hardware evidence collection.
 - app/services/installer.py: currently a placeholder.
 - app/profiles/: currently minimal profile stubs.
 
@@ -34,7 +43,7 @@ The current app is mostly UI + placeholders. The backend that performs actual De
   - tracks wipe method "quick" or "secure"
   - requires explicit confirmation checkbox
   - currently performs no destructive action
-  - generates/open a simulated PDF certificate
+  - generates/opens a factual hardware analysis PDF that does not claim erasure
 
 ## Problem To Solve
 Implement a real backend for Debian boot-device preparation that can be called from the current app flow after secure erase confirmation when:
@@ -224,7 +233,7 @@ No test should require writing real block devices.
 - Use dataclasses or pydantic models for IO contracts.
 - Avoid hardcoded paths except safe defaults.
 - No shell injection risks.
-- Keep implementation Linux-first but architecture-ready for macOS/Windows stubs.
+- Keep implementation Linux-only for the supported PC x86-64/amd64 production target.
 
 ## Suggested Implementation Sequence
 1. Implement command runner + error types.
@@ -236,8 +245,10 @@ No test should require writing real block devices.
 
 ## Notes About Current Codebase Constraints
 - app/services/installer.py is currently a no-op placeholder.
-- app/services/certificate.py currently simulates erasure reporting and has macOS-oriented hardware probing.
-- app/services/system_info.py Linux path currently depends on inxi parsing and should be hardened over time.
+- app/services/certificate.py renders an analysis-only report; hardware probing is isolated in
+  app/services/hardware_report.py with a Linux x86-64 collector.
+- app/services/system_info.py delegates to the normalized Linux x86-64 collector
+  and rejects unsupported runtimes.
 - app/profiles/*.yaml currently only contain a name field.
 
 ## Immediate Deliverables Copilot Should Generate

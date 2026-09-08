@@ -9,6 +9,7 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt, QTimer
 from core.recommendation import RecommendationScreen
+from services.hardware_report import UnsupportedPlatformError
 from services.system_info import get_system_info
 from ui.ui_config import apply_window_mode, PRIMARY_COLOR, TEXT_COLOR
 
@@ -38,7 +39,20 @@ class HardwareScreen(QWidget):
 
     def load_hardware_info(self):
         # Fetch system info and replace loading state with detailed specs.
-        info = get_system_info()
+        try:
+            info = get_system_info()
+        except UnsupportedPlatformError as error:
+            self.clear_layout()
+            title = QLabel("Unsupported Runtime")
+            title.setAlignment(Qt.AlignCenter)
+            title.setStyleSheet(f"font-size: 22px; font-weight: bold; color: {PRIMARY_COLOR};")
+            detail = QLabel(str(error))
+            detail.setWordWrap(True)
+            detail.setAlignment(Qt.AlignCenter)
+            detail.setStyleSheet(f"font-size: 14px; color: {TEXT_COLOR};")
+            self.layout.addWidget(title)
+            self.layout.addWidget(detail)
+            return
         cpu_model = info.get("cpu_model", info.get("cpu", "Unknown CPU"))
         cpu_arch = info.get("cpu_arch", "Unknown architecture")
         cpu_cores = info.get("cpu_cores", "Unknown cores")

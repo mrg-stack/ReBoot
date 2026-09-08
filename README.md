@@ -5,16 +5,23 @@ ReBoot is a PySide6 desktop proof-of-concept that guides a user through:
 1. Welcome/start screen
 2. Hardware analysis
 3. Distro recommendation and experience choice
-4. Secure erase confirmation step (POC, non-destructive)
+4. Secure erase preference confirmation and hardware analysis report (non-destructive)
 
 The current implementation focuses on a clean architecture and incremental product flow.
+
+## Supported Production Platform
+
+ReBoot supports **PC-compatible x86-64/amd64 Linux only** as a production
+runtime and hardware-report target. Other operating systems and CPU
+architectures are rejected explicitly before hardware probing. macOS may be
+used as a development host for editing the project and running an x86-64 Linux
+guest in QEMU, but it is not a supported ReBoot runtime or report target.
 
 ## Features
 
 - Guided multi-screen setup flow
-- Cross-platform hardware detection strategy:
-	- macOS: `platform` + `psutil` + `sysctl`
-	- Linux: `inxi -Fxz` parsing fallback
+- Normalized PC x86-64 Linux hardware detection from kernel interfaces and
+  standard command-line tools
 - Detailed CPU presentation (model, architecture, cores/threads, speed)
 - Recommendation screen with user-selectable experience level:
 	- Easy to use (Linux Mint)
@@ -23,14 +30,20 @@ The current implementation focuses on a clean architecture and incremental produ
 	- Quick erase option
 	- Secure erase option (recommended for GDPR-style compliance)
 	- Continue disabled until user confirms permanent data deletion
+- One-page `Data Erasure Report` PDF with analysis-only semantics:
+	- Records the requested method but clearly states it was not executed
+	- Uses factual disk and hardware evidence without simulated results
+	- Generates a report ID and local timestamped artifact under `artifacts/`
 
 ## GDPR-Style Erasure Guidance (POC)
 
 - If the user wants GDPR-style compliance, they should select `Secure erase`.
 - GDPR expectations are that personal data is rendered irrecoverable using proper sanitization methods.
 - Potential penalties can reach up to EUR 20 million or 4% of annual global turnover (whichever is greater).
-- The erasure process should be documented for accountability. A certificate of data erasure is a practical way to support this.
-- In this POC build, no destructive wipe command is executed yet; this section defines UX and policy intent only.
+- A completed erasure process should be documented for accountability, but a
+  certificate must only claim success when backed by execution and verification evidence.
+- In this build, no destructive wipe command is executed. The generated PDF is a
+  hardware analysis report, not proof that data was erased.
 
 ### Planned Method Model (HDD vs SSD)
 
@@ -48,6 +61,27 @@ The current implementation focuses on a clean architecture and incremental produ
 - SSD/NVMe tooling candidates: nvme-cli, hdparm, and vendor-approved firmware erase tooling.
 - ReBoot currently exposes only UX and policy decisions for these paths; command execution is intentionally disabled in the POC.
 
+## Hardware Analysis Report
+
+The report collector keeps OS probing separate from PDF rendering and always
+distinguishes a successful empty probe (`Not detected`) from a failed or
+unsupported probe (`Unavailable`). Functional checks that are not performed are
+shown as `Not tested`.
+
+- Linux uses DMI, network, power, TPM, DRM display, camera, input, firmware,
+  Secure Boot, Thunderbolt/USB4, audio, and optical-drive evidence from
+  `/sys`, `/dev`, and `/proc`, plus `lsblk --json --bytes`, `lspci`, `lsusb`,
+  and `xrandr` fallback data when available.
+- Disk model, serial, capacity, transport, sector count, and health are printed
+  only when the operating system reports them. Machine serials are never
+  substituted for disk serials.
+- HPA, DCO, remapped-sector, SMART, and similar values remain `Not reported` or
+  `Unavailable` unless a real probe supplies evidence.
+- Missing tools or kernel data remain truthfully distinguished as
+  `Unavailable`, `Not detected`, or `Not tested`.
+
+Digital signing and destructive erasure execution are intentionally deferred.
+
 ## Project Structure
 
 ```text
@@ -63,6 +97,8 @@ ReBoot/
 │   │   ├── recommendation.py
 │   │   └── secure_erase.py
 │   ├── services/
+│   │   ├── certificate.py
+│   │   ├── hardware_report.py
 │   │   ├── system_info.py
 │   │   └── installer.py
 │   └── profiles/
@@ -99,9 +135,14 @@ pip install -r requirements.txt
 
 ### 3. Run the app
 
+On a PC-compatible x86-64/amd64 Linux host:
+
 ```bash
 python app/main.py
 ```
+
+On macOS, use QEMU to run the supported Linux target rather than running
+ReBoot or collecting a host hardware report directly.
 
 ### Window mode override
 
@@ -130,13 +171,14 @@ REBOOT_WINDOW_MODE=windowed python app/main.py
 
 - Recommendation logic is still POC-level
 - Secure erase action is a placeholder (no destructive disk command is executed)
-- POC certificate flow generates a local PDF proof and opens it with the default viewer (USB export is planned)
-- Linux parsing is intentionally simple and should be hardened over time
+- The local PDF is an analysis-only report and is not an erasure certificate or proof of sanitization
+- Some low-level disk facts require privileged Linux tooling and are truthfully shown as unavailable or not reported
+- Non-Linux and non-x86-64/amd64 systems are intentionally unsupported
 
 ## Next Steps
 
 - Connect selected distro/profile to next-step workflow
-- Add unit tests for `services/system_info.py`
+- Expand unit tests for `services/system_info.py`
 - Add installer integration in `services/installer.py`
 
 ## Debian Boot Kiosk Setup
