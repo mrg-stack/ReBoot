@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ReBoot Kiosk
+Comment=Launch ReBoot in fullscreen kiosk mode
+Exec=/bin/bash __REBOOT_ROOT__/deploy/reboot-kiosk-launch.sh
+Terminal=false
+X-GNOME-Autostart-enabled=true
+Categories=System;

@@ -1,0 +1,16 @@
+[Unit]
+Description=ReBoot Kiosk UI
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+WorkingDirectory=__REBOOT_ROOT__
+ExecStart=/bin/bash __REBOOT_ROOT__/deploy/reboot-kiosk-launch.sh
+Restart=always
+RestartSec=2
+Environment=PYTHONUNBUFFERED=1
+Environment=REBOOT_WINDOW_MODE=fullscreen
+
+[Install]
+WantedBy=default.target

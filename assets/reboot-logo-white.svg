@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="450" height="160" viewBox="0 0 450 160" role="img" aria-labelledby="title desc">
+  <title id="title">Re:Boot logo (white text)</title>
+  <desc id="desc">Wordmark Re:Boot with white text for dark backgrounds, green top dot and blue bottom dot in the colon.</desc>
+
+  <defs>
+    <linearGradient id="dotGreen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#78D6B4"/>
+      <stop offset="0.52" stop-color="#4CAF88"/>
+      <stop offset="1" stop-color="#319A73"/>
+    </linearGradient>
+    <linearGradient id="dotBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4F7DF3"/>
+      <stop offset="0.52" stop-color="#2E67E8"/>
+      <stop offset="1" stop-color="#1E4FC0"/>
+    </linearGradient>
+  </defs>
+
+  <g fill="#FFFFFF" font-family="Avenir Next, Avenir, Montserrat, Helvetica, Arial, sans-serif" font-size="96" font-weight="700">
+    <text x="30" y="110">Re</text>
+    <text x="188" y="110">Boot</text>
+  </g>
+
+  <circle cx="169" cy="70" r="13" fill="url(#dotGreen)"/>
+  <circle cx="169" cy="102" r="13" fill="url(#dotBlue)"/>
+</svg>

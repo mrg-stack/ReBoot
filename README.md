@@ -103,6 +103,20 @@ pip install -r requirements.txt
 python app/main.py
 ```
 
+### Window mode override
+
+ReBoot now supports three runtime window modes:
+
+- `fullscreen` (default on Linux, intended for Debian kiosk boot)
+- `maximized`
+- `windowed` (fixed-size development window)
+
+You can override mode at runtime:
+
+```bash
+REBOOT_WINDOW_MODE=windowed python app/main.py
+```
+
 ## Runtime Flow
 
 1. `WelcomeScreen` is shown from `app/main.py`
@@ -124,3 +138,44 @@ python app/main.py
 - Connect selected distro/profile to next-step workflow
 - Add unit tests for `services/system_info.py`
 - Add installer integration in `services/installer.py`
+
+## Debian Boot Kiosk Setup
+
+If the goal is to start ReBoot fullscreen automatically at boot on Debian,
+use the deployment files under `deploy/`.
+
+### Prerequisites
+
+- A desktop session that auto-logs into your kiosk user.
+- Python virtual environment already created at `venv/`.
+- Dependencies installed with `pip install -r requirements.txt`.
+
+### Install kiosk startup (user-level)
+
+From the project root:
+
+```bash
+bash deploy/install_kiosk_user.sh
+```
+
+This installs:
+
+- `~/.config/systemd/user/reboot-kiosk.service`
+- `~/.config/autostart/reboot-kiosk.desktop`
+
+and enables/restarts the user service when `systemctl --user` is available.
+
+### Manual control
+
+```bash
+systemctl --user status reboot-kiosk.service
+systemctl --user restart reboot-kiosk.service
+systemctl --user stop reboot-kiosk.service
+```
+
+### Files involved
+
+- `deploy/reboot-kiosk-launch.sh`: launcher script used by service/autostart
+- `deploy/reboot-kiosk.service`: systemd user service template
+- `deploy/reboot-kiosk.desktop`: XDG autostart template
+- `deploy/install_kiosk_user.sh`: installs templates with absolute project path
