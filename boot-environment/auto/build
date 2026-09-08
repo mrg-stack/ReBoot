@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+
+LOG=build.log
+
+if lb build noauto "${@}" >"$LOG" 2>&1; then
+    cat "$LOG"
+else
+    status=$?
+    cat "$LOG" >&2
+    exit "$status"
+fi

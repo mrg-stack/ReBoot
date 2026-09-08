@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Shared App Folder
+Comment=Open the application directory shared from the Mac
+Exec=pcmanfm-qt /mnt/reboot-app
+Icon=folder-development
+Terminal=false
+Categories=Development;

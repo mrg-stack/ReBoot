@@ -1,0 +1,48 @@
+#!/bin/sh
+set -eu
+
+MODE=${1:-windowed}
+SOURCE=${2:-bundled}
+
+case "$SOURCE" in
+    bundled)
+        APP=/opt/reboot/app/main.py
+        ;;
+    shared)
+        if [ -r /mnt/reboot-app/main.py ]; then
+            APP=/mnt/reboot-app/main.py
+        elif [ -r /mnt/reboot-app/src/main.py ]; then
+            APP=/mnt/reboot-app/src/main.py
+        else
+            exec xmessage -center \
+                "No application found. Add main.py or src/main.py to the Mac application folder."
+        fi
+        ;;
+    *)
+        echo "Unknown application source: $SOURCE" >&2
+        exit 1
+        ;;
+esac
+
+if [ ! -r "$APP" ]; then
+    exec xmessage -center "ReBoot application is missing: $APP"
+fi
+
+cd "$(dirname "$APP")"
+
+case "$MODE" in
+    windowed)
+        REBOOT_ARTIFACTS_DIR=/var/lib/reboot/certificates \
+            REBOOT_WINDOW_MODE=windowed \
+            exec python3 "$APP"
+        ;;
+    fullscreen)
+        REBOOT_ARTIFACTS_DIR=/var/lib/reboot/certificates \
+            REBOOT_WINDOW_MODE=fullscreen \
+            exec python3 "$APP"
+        ;;
+    *)
+        echo "Unknown launch mode: $MODE" >&2
+        exit 1
+        ;;
+esac

@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+
+sleep 2
+
+for launcher in "$HOME"/Desktop/*.desktop; do
+    [ -e "$launcher" ] || continue
+    chmod 0755 "$launcher"
+    if ! gio set "$launcher" metadata::trusted true; then
+        logger -t reboot "Could not mark desktop launcher trusted: $launcher"
+    fi
+done

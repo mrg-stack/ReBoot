@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .venv/
 artifacts/*.pdf
+live-image-*.iso
+live-image-*.iso.sha256
+*.qcow2

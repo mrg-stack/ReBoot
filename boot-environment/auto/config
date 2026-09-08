@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+
+lb config noauto \
+    --mode debian \
+    --distribution trixie \
+    --architectures amd64 \
+    --binary-images iso-hybrid \
+    --debian-installer none \
+    --archive-areas "main contrib non-free-firmware" \
+    --apt-recommends true \
+    --checksums sha256 \
+    --source true \
+    --source-images tar \
+    --iso-application "ReBoot" \
+    --iso-publisher "ReBoot Project" \
+    --iso-volume "REBOOT_LIVE" \
+    --bootappend-live "boot=live components persistence username=reboot hostname=reboot locales=en_DK.UTF-8 keyboard-layouts=dk quiet splash" \
+    "${@}"

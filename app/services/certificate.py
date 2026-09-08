@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 import platform
 import re
@@ -824,7 +825,12 @@ def generate_hardware_report(
         generated_at=generated_at,
         development_mode=development_mode,
     )
-    directory = output_dir or Path(__file__).resolve().parents[2] / "artifacts"
+    configured_output = os.environ.get("REBOOT_ARTIFACTS_DIR")
+    directory = (
+        output_dir
+        or (Path(configured_output).expanduser() if configured_output else None)
+        or Path(__file__).resolve().parents[2] / "artifacts"
+    )
     directory.mkdir(parents=True, exist_ok=True)
     file_stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     ident = _sanitize_filename_part(report["identifier_value"])[:12]

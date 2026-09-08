@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Test Shared App Fullscreen
+Comment=Run the shared ReBoot application in production-style fullscreen mode
+Exec=/usr/local/bin/reboot-launcher fullscreen shared
+Icon=view-fullscreen
+Terminal=false
+Categories=Development;

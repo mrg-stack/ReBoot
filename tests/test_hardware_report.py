@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import re
 import shutil
 import sys
+import tempfile
 import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -640,6 +642,18 @@ class HardwareReportTests(unittest.TestCase):
         self.assertEqual(path.parent, output_dir)
         self.assertTrue(path.is_file())
         self.assertGreater(path.stat().st_size, 1000)
+
+    def test_generator_honors_runtime_artifact_directory(self):
+        with tempfile.TemporaryDirectory() as output_dir:
+            with patch.dict(
+                os.environ,
+                {"REBOOT_ARTIFACTS_DIR": output_dir},
+            ):
+                path = generate_hardware_report("secure", snapshot=self.collect())
+
+            self.assertEqual(path.parent, Path(output_dir))
+            self.assertTrue(path.is_file())
+            self.assertGreater(path.stat().st_size, 1000)
 
 
 if __name__ == "__main__":

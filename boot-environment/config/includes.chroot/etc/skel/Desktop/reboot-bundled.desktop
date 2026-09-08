@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Run Bundled ReBoot
+Comment=Run the ReBoot application included in this image
+Exec=/usr/local/bin/reboot-launcher windowed bundled
+Icon=application-x-executable
+Terminal=false
+Categories=Development;

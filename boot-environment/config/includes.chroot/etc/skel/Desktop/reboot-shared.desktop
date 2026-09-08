@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Run Shared ReBoot App
+Comment=Run main.py from the Mac application folder
+Exec=/usr/local/bin/reboot-launcher windowed shared
+Icon=application-x-executable
+Terminal=false
+Categories=Development;

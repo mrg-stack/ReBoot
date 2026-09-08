@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=ReBoot desktop setup
+Exec=/usr/local/lib/reboot/setup-desktop
+OnlyShowIn=LXQt;
+NoDisplay=true
+X-LXQt-Need-Tray=false

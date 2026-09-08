@@ -1,0 +1,8 @@
+[Unit]
+Description=ReBoot host-shared application folder
+
+[Mount]
+What=reboot_app
+Where=/mnt/reboot-app
+Type=9p
+Options=trans=virtio,version=9p2000.L,msize=1048576

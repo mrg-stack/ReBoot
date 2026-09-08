@@ -9,6 +9,21 @@ ReBoot is a PySide6 desktop proof-of-concept that guides a user through:
 
 The current implementation focuses on a clean architecture and incremental product flow.
 
+## License and Attribution
+
+ReBoot is free software licensed under the
+[GNU General Public License v3.0 or later](LICENSE). You may use, study,
+modify, and redistribute it, but distributed modified versions must remain
+under the GPL and include their corresponding source code.
+
+SPDX license identifier: `GPL-3.0-or-later`.
+
+Copyright (C) 2026 Guillaume Nadon. See [NOTICE](NOTICE) and
+[AUTHORS.md](AUTHORS.md) for project attribution. Software included in the
+bootable image retains its own license; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the package copyright
+files shipped in the image.
+
 ## Supported Production Platform
 
 ReBoot supports **PC-compatible x86-64/amd64 Linux only** as a production
@@ -119,6 +134,16 @@ ReBoot/
 │       ├── student.yaml
 │       └── casual.yaml
 ├── assets/
+├── boot-environment/
+│   ├── auto/
+│   ├── config/
+│   ├── docs/
+│   └── scripts/
+├── .github/workflows/release-iso.yml
+├── LICENSE
+├── NOTICE
+├── AUTHORS.md
+├── THIRD_PARTY_NOTICES.md
 ├── requirements.txt
 └── README.md
 ```
@@ -234,3 +259,39 @@ systemctl --user stop reboot-kiosk.service
 - `deploy/reboot-kiosk.service`: systemd user service template
 - `deploy/reboot-kiosk.desktop`: XDG autostart template
 - `deploy/install_kiosk_user.sh`: installs templates with absolute project path
+
+## Bootable ISO Releases
+
+The reproducible Debian Live source is maintained in `boot-environment/`.
+Generated ISOs and VM disks are intentionally excluded from Git.
+
+Build on Debian amd64:
+
+```bash
+make -C boot-environment build
+```
+
+The build stages the current `app/` source and project licensing documents
+into the live image. It also collects the corresponding Debian source packages
+for software distributed in the ISO, then creates:
+
+```text
+boot-environment/live-image-amd64.hybrid.iso
+boot-environment/live-image-amd64.hybrid.iso.sha256
+boot-environment/live-image-amd64-source.debian.tar
+boot-environment/live-image-amd64-source.live.tar
+boot-environment/live-image-amd64.sources.sha256
+```
+
+Pushing a version tag such as `v0.1.0` runs the ISO release workflow. A
+successful workflow publishes the ISO, checksums, exact package manifest,
+split corresponding-source archive, repository source archive, and generated
+release documentation on GitHub Releases:
+
+```bash
+git tag -a v0.1.0 -m "ReBoot v0.1.0"
+git push origin v0.1.0
+```
+
+See [`boot-environment/README.md`](boot-environment/README.md) for local build,
+QEMU testing, persistence, and USB-writing instructions.
