@@ -17,15 +17,18 @@ jobs:
     name: Build and publish amd64 ISO
     runs-on: ubuntu-24.04
     timeout-minutes: 300
+    container:
+      image: debian:trixie
+      options: --privileged
 
     steps:
-      - name: Check out tagged source
-        uses: actions/checkout@v4
-
-      - name: Install live-build
+      - name: Install build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes live-build
+          apt-get update
+          apt-get install --yes ca-certificates gh git live-build
+
+      - name: Check out tagged source
+        uses: actions/checkout@v5
 
       - name: Build ReBoot ISO
         run: ./boot-environment/scripts/build-debian.sh --clean
@@ -66,4 +69,5 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --title "ReBoot ${GITHUB_REF_NAME}" \
             --notes-file boot-environment/RELEASE_NOTES.md \
+            --prerelease \
             --verify-tag

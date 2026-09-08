@@ -12,6 +12,14 @@ DEBIAN_SOURCE=live-image-amd64-source.debian.tar
 LIVE_SOURCE=live-image-amd64-source.live.tar
 SOURCE_CHECKSUM=live-image-amd64.sources.sha256
 
+run_as_root() {
+    if [ "$(id -u)" -eq 0 ]; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
 normalize_artifact() {
     target=$1
     shift
@@ -49,7 +57,7 @@ fi
 cd "$PROJECT_DIR"
 
 if [ "${1:-}" = "--clean" ]; then
-    sudo lb clean --purge
+    run_as_root lb clean --purge
 elif [ "$#" -gt 0 ]; then
     echo "Usage: $0 [--clean]" >&2
     exit 1
@@ -78,7 +86,7 @@ for document in LICENSE NOTICE AUTHORS.md THIRD_PARTY_NOTICES.md; do
     install -m 0644 "$REBOOT_DIR/$document" "$STAGED_DOCS/$document"
 done
 
-sudo rm -f \
+run_as_root rm -f \
     "$IMAGE" \
     "$IMAGE.sha256" \
     "$PACKAGE_MANIFEST" \
@@ -89,8 +97,8 @@ sudo rm -f \
     binary.packages \
     source.debian.tar \
     source.debian-live.tar
-sudo lb config
-sudo lb build
+run_as_root lb config
+run_as_root lb build
 
 normalize_artifact "$IMAGE" binary.hybrid.iso
 normalize_artifact "$PACKAGE_MANIFEST" binary.packages
