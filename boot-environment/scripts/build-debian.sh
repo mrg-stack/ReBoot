@@ -95,6 +95,8 @@ run_as_root rm -f \
     "$SOURCE_CHECKSUM" \
     binary.hybrid.iso \
     binary.packages \
+    live-image-source.debian.tar \
+    live-image-source.live.tar \
     source.debian.tar \
     source.debian-live.tar
 run_as_root lb config
@@ -102,8 +104,8 @@ run_as_root lb build
 
 normalize_artifact "$IMAGE" binary.hybrid.iso
 normalize_artifact "$PACKAGE_MANIFEST" binary.packages
-normalize_artifact "$DEBIAN_SOURCE" source.debian.tar
-normalize_artifact "$LIVE_SOURCE" source.debian-live.tar
+normalize_artifact "$DEBIAN_SOURCE" live-image-source.debian.tar source.debian.tar
+normalize_artifact "$LIVE_SOURCE" live-image-source.live.tar source.debian-live.tar
 
 sha256sum "$IMAGE" > "$IMAGE.sha256"
 sha256sum "$DEBIAN_SOURCE" "$LIVE_SOURCE" > "$SOURCE_CHECKSUM"
