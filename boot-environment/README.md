@@ -53,4 +53,6 @@ packages under their respective licenses and package copyright notices. The
 build collects corresponding Debian package source and the live-build
 configuration source into separate tarballs. Tagged releases split those
 tarballs into numbered parts that can be concatenated and verified using the
-source checksum file.
+source checksum file. The user-facing GitHub release contains only the ISO and
+its checksum; source and package metadata are placed in a separate linked
+source-compliance release.

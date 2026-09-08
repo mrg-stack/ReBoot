@@ -55,19 +55,37 @@ jobs:
               "$archive.part-"
           done
 
-      - name: Publish GitHub release
+      - name: Prepare release notes
+        working-directory: boot-environment
+        run: |
+          source_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/source-${GITHUB_REF_NAME}"
+          sed "s|@SOURCE_RELEASE_URL@|${source_url}|g" \
+            RELEASE_NOTES.md > user-release-notes.md
+
+      - name: Publish corresponding-source release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            boot-environment/live-image-amd64.hybrid.iso \
-            boot-environment/live-image-amd64.hybrid.iso.sha256 \
+          gh release create "source-${GITHUB_REF_NAME}" \
             boot-environment/live-image-amd64.packages \
             boot-environment/live-image-amd64.sources.sha256 \
             boot-environment/live-image-amd64-source.debian.tar.part-* \
             boot-environment/live-image-amd64-source.live.tar.part-* \
             --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "Source archives for ReBoot ${GITHUB_REF_NAME}" \
+            --notes-file boot-environment/SOURCE_RELEASE_NOTES.md \
+            --prerelease
+
+      - name: Publish user release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            "boot-environment/live-image-amd64.hybrid.iso#ReBoot bootable USB image - download this" \
+            "boot-environment/live-image-amd64.hybrid.iso.sha256#SHA-256 checksum - optional" \
+            --repo "${GITHUB_REPOSITORY}" \
             --title "ReBoot ${GITHUB_REF_NAME}" \
-            --notes-file boot-environment/RELEASE_NOTES.md \
+            --notes-file boot-environment/user-release-notes.md \
             --prerelease \
             --verify-tag

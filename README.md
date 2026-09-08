@@ -118,7 +118,9 @@ make -C boot-environment build
 ```
 
 Generated ISOs and VM disks are not stored in Git. Pushing a version tag such
-as `v0.1.0` starts the GitHub ISO release workflow.
+as `v0.1.0` starts the GitHub ISO release workflow. The main release contains
+only the flashable ISO and its checksum; package manifests and corresponding
+Debian source are published in a separate linked source-compliance release.
 
 Detailed build, QEMU, persistence, and USB-writing instructions are in
 [`boot-environment/README.md`](boot-environment/README.md).
