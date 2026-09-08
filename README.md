@@ -17,6 +17,19 @@ architectures are rejected explicitly before hardware probing. macOS may be
 used as a development host for editing the project and running an x86-64 Linux
 guest in QEMU, but it is not a supported ReBoot runtime or report target.
 
+For UI development on macOS or another unsupported host, start the app normally
+and enable the unchecked **Developer mode — simulate an AMD64 Linux PC** control
+on the welcome screen before choosing any route. This mode uses one deterministic,
+fictional Linux x86-64 fixture and never probes the host's hardware. The warning
+remains visible through hardware analysis, recommendation, and secure-erase
+screens, including the direct erase-only route.
+
+Developer simulation is not a production bypass: leaving the control unchecked
+retains fail-closed Linux/amd64 validation, including rejection of Darwin and
+ARM. Simulation performs no erasure, analyzes no real hardware, and produces a
+clearly bannered `reboot_development_simulation_...pdf` that is not valid
+hardware or erasure evidence.
+
 ## Features
 
 - Guided multi-screen setup flow
@@ -141,8 +154,8 @@ On a PC-compatible x86-64/amd64 Linux host:
 python app/main.py
 ```
 
-On macOS, use QEMU to run the supported Linux target rather than running
-ReBoot or collecting a host hardware report directly.
+On macOS, use the welcome-screen developer simulation only for UI/report
+development. Use QEMU to exercise the supported production Linux target.
 
 ### Window mode override
 

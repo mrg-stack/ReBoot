@@ -12,6 +12,7 @@ from services.hardware_report import (
     EvidenceState,
     HardwareSnapshot,
     collect_hardware_snapshot,
+    create_development_snapshot,
 )
 
 
@@ -383,13 +384,23 @@ def build_report_data(
     snapshot: HardwareSnapshot | None = None,
     generated_at: datetime | None = None,
     report_id: str | None = None,
+    *,
+    development_mode: bool = False,
 ) -> dict:
     metadata = metadata or {}
-    hardware = snapshot or collect_hardware_snapshot()
+    if development_mode:
+        if snapshot is not None and not snapshot.simulated:
+            raise ValueError("development_mode requires a simulated hardware snapshot")
+        hardware = snapshot or create_development_snapshot()
+    else:
+        hardware = snapshot or collect_hardware_snapshot()
+    simulated = hardware.simulated
     timestamp = generated_at or datetime.now(timezone.utc)
     if timestamp.tzinfo is None:
         timestamp = timestamp.replace(tzinfo=timezone.utc)
-    identifier = report_id or str(uuid.uuid4()).upper()
+    identifier = report_id or (
+        "SIMULATED-REPORT-ID" if simulated else str(uuid.uuid4()).upper()
+    )
     disk = hardware.first_disk()
 
     if disk:
@@ -397,11 +408,13 @@ def build_report_data(
         disk_vendor = disk.vendor
         disk_model = disk.model
         disk_serial = disk.serial
-        disk_size = disk.capacity
+        disk_size = f"{disk.capacity} (simulated)" if simulated else disk.capacity
         disk_bus = disk.transport
-        disk_sectors = disk.sector_count
+        disk_sectors = (
+            f"{disk.sector_count} (simulated)" if simulated else disk.sector_count
+        )
         disk_health = disk.health
-        disk_summary = _join_values([disk.model, disk.capacity, disk.transport])
+        disk_summary = _join_values([disk.model, disk_size, disk.transport])
     else:
         disk_name = f"Disk 1 ({hardware.disk_probe.display()})"
         disk_vendor = hardware.disk_probe.display()
@@ -415,14 +428,25 @@ def build_report_data(
 
     network_slots = _split_evidence_slots(hardware.field("networks"), 2)
     usb_slots = _split_evidence_slots(hardware.field("usb_devices"), 3)
-    chassis = " ".join(str(metadata.get("chassis_type", "")).split())
-    if not chassis:
+    if simulated:
         chassis = _display(hardware.field("chassis_type"))
+    else:
+        chassis = " ".join(str(metadata.get("chassis_type", "")).split())
+        if not chassis:
+            chassis = _display(hardware.field("chassis_type"))
 
     generated_text = timestamp.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     model_for_header = _display(hardware.field("model"))
     report = {
-        "header_bar": f"{generated_text}, REBOOT HARDWARE ANALYSIS, {hardware.os_name.upper()}, {model_for_header}",
+        "header_bar": (
+            "DEVELOPMENT SIMULATION - NOT A REAL HARDWARE REPORT"
+            if simulated
+            else f"{generated_text}, REBOOT HARDWARE ANALYSIS, {hardware.os_name.upper()}, {model_for_header}"
+        ),
+        "report_title": (
+            "Development Simulation Report" if simulated else "Data Erasure Report"
+        ),
+        "simulated": simulated,
         "custom_fields": {
             "Asset ID": " ".join(str(metadata.get("asset_id", "")).split()) or "Not provided",
             "Operator Name": " ".join(str(metadata.get("operator_name", "")).split()) or "Not provided",
@@ -443,7 +467,11 @@ def build_report_data(
             "Duration": "Not applicable",
             "Method": _requested_method(wipe_method),
             "Erasure Rounds": "0",
-            "Status": "Analysis only - erasure not performed",
+            "Status": (
+                "Development simulation - erasure not performed"
+                if simulated
+                else "Analysis only - erasure not performed"
+            ),
             "Report ID": identifier,
         },
         "hardware_details": {
@@ -573,7 +601,7 @@ def _build_report_content(report: dict) -> str:
 
     row = layout["brand_row"]
     add_text(
-        "Data Erasure Report",
+        report.get("report_title", "Data Erasure Report"),
         row["title_x"],
         _baseline_for_visual_center(row["center_y"], row["title_size"]),
         row["title_size"],
@@ -786,18 +814,26 @@ def generate_hardware_report(
     output_dir: Path | None = None,
     snapshot: HardwareSnapshot | None = None,
     generated_at: datetime | None = None,
+    *,
+    development_mode: bool = False,
 ) -> Path:
     report = build_report_data(
         wipe_method,
         metadata=metadata,
         snapshot=snapshot,
         generated_at=generated_at,
+        development_mode=development_mode,
     )
     directory = output_dir or Path(__file__).resolve().parents[2] / "artifacts"
     directory.mkdir(parents=True, exist_ok=True)
     file_stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     ident = _sanitize_filename_part(report["identifier_value"])[:12]
-    output_path = directory / f"reboot_hardware_analysis_{file_stamp}_{ident}.pdf"
+    prefix = (
+        "reboot_development_simulation"
+        if report["simulated"]
+        else "reboot_hardware_analysis"
+    )
+    output_path = directory / f"{prefix}_{file_stamp}_{ident}.pdf"
     content = _build_report_content(report)
     output_path.write_bytes(_build_report_pdf(content))
     return output_path
@@ -809,6 +845,8 @@ def generate_erase_certificate(
     output_dir: Path | None = None,
     snapshot: HardwareSnapshot | None = None,
     generated_at: datetime | None = None,
+    *,
+    development_mode: bool = False,
 ) -> Path:
     return generate_hardware_report(
         wipe_method,
@@ -816,6 +854,7 @@ def generate_erase_certificate(
         output_dir=output_dir,
         snapshot=snapshot,
         generated_at=generated_at,
+        development_mode=development_mode,
     )
 
 

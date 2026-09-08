@@ -27,11 +27,12 @@ from ui.ui_config import apply_window_mode, PRIMARY_COLOR, ACCENT_COLOR, TEXT_CO
 class SecureEraseScreen(QWidget):
     # Collect wipe preference and explicit confirmation before proceeding.
 
-    def __init__(self, previous_screen=None, install_os=True):
+    def __init__(self, previous_screen=None, install_os=True, development_mode=False):
         super().__init__()
 
         self.previous_screen = previous_screen
         self.install_os = install_os
+        self.development_mode = bool(development_mode)
         self.wipe_method = "secure"
         self.confirmed = False
 
@@ -60,6 +61,17 @@ class SecureEraseScreen(QWidget):
         warning.setWordWrap(True)
         warning.setAlignment(Qt.AlignCenter)
         warning.setStyleSheet(f"font-size: 13px; color: {ACCENT_COLOR};")
+
+        simulation_warning = QLabel(
+            "Developer simulation active — only fictional AMD64 Linux data will be "
+            "reported; no real hardware is analyzed and the report is not valid evidence."
+        )
+        simulation_warning.setWordWrap(True)
+        simulation_warning.setAlignment(Qt.AlignCenter)
+        simulation_warning.setStyleSheet(
+            f"font-size: 13px; font-weight: bold; color: {ACCENT_COLOR};"
+        )
+        simulation_warning.setVisible(self.development_mode)
 
         post_wipe_note = QLabel(
             "After analysis: OS installation is planned but not started by this step."
@@ -148,6 +160,7 @@ class SecureEraseScreen(QWidget):
         layout.addWidget(title)
         layout.addWidget(explanation)
         layout.addWidget(warning)
+        layout.addWidget(simulation_warning)
         layout.addWidget(post_wipe_note)
         layout.addSpacing(12)
         layout.addWidget(options_title)
@@ -214,7 +227,11 @@ class SecureEraseScreen(QWidget):
 
         report_generator = generate_hardware_report if self.install_os else generate_erase_certificate
         try:
-            report_path = report_generator(self.wipe_method, report_metadata)
+            report_path = report_generator(
+                self.wipe_method,
+                report_metadata,
+                development_mode=getattr(self, "development_mode", False),
+            )
         except UnsupportedPlatformError as error:
             QMessageBox.critical(
                 self,

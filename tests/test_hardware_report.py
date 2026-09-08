@@ -8,7 +8,7 @@ import shutil
 import sys
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,13 +36,17 @@ from services.hardware_report import (  # noqa: E402
     UnsupportedPlatformError,
     _combine_evidence,
     collect_hardware_snapshot,
+    create_development_snapshot,
     detected,
     not_detected,
     not_tested,
     unavailable,
 )
 from services.system_info import get_system_info  # noqa: E402
+from core.hardware import HardwareScreen  # noqa: E402
+from core.recommendation import RecommendationScreen  # noqa: E402
 from core.secure_erase import SecureEraseScreen  # noqa: E402
+from ui.welcome import WelcomeScreen  # noqa: E402
 
 
 def write_text(root: Path, relative: str, value: str) -> None:
@@ -257,6 +261,37 @@ class HardwareReportTests(unittest.TestCase):
             collect_hardware_snapshot("Linux", machine="arm64", runner=runner)
         self.assertEqual(calls, [])
 
+    def test_development_snapshot_is_deterministic_and_never_probes_darwin(self):
+        first = create_development_snapshot()
+        second = create_development_snapshot()
+
+        self.assertEqual(first, second)
+        self.assertTrue(first.simulated)
+        self.assertEqual(first.os_name, "Linux")
+        self.assertEqual(first.architecture, "x86_64")
+        self.assertEqual(first.field("manufacturer").value, "ReBoot Development Fixture")
+        self.assertEqual(first.field("model").value, "Simulated AMD64 PC")
+        self.assertEqual(first.field("serial").value, "SIMULATED-SYSTEM-SERIAL")
+        self.assertEqual(first.first_disk().model, "Simulated NVMe SSD")
+
+        runner = Mock(side_effect=AssertionError("development mode must not run probes"))
+        with patch(
+            "services.system_info.collect_hardware_snapshot",
+            side_effect=AssertionError("production collector must not run"),
+        ) as collector:
+            info = get_system_info(
+                "Darwin",
+                machine="arm64",
+                runner=runner,
+                development_mode=True,
+            )
+
+        collector.assert_not_called()
+        runner.assert_not_called()
+        self.assertTrue(info["simulated"])
+        self.assertEqual(info["cpu_arch"], "x86_64")
+        self.assertIn("Simulated x86-64 Processor", info["cpu_model"])
+
     def test_successful_empty_probe_differs_from_unavailable_probe(self):
         def empty_runner(args):
             if args[0] == "lsblk":
@@ -369,6 +404,67 @@ class HardwareReportTests(unittest.TestCase):
         self.assertNotIn("NOT IMPLEMENTED", rendered.upper())
         self.assertNotIn("ERASED (SIMULATED)", rendered.upper())
         self.assertNotIn("SUCCESSFUL", rendered.upper())
+        self.assertFalse(report["simulated"])
+        self.assertNotIn("DEVELOPMENT SIMULATION", rendered.upper())
+
+    def test_simulated_report_is_unmistakable_and_contains_no_host_data(self):
+        output_dir = ROOT / "artifacts/test-simulation-output"
+        shutil.rmtree(output_dir, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, output_dir, True)
+        generated_at = datetime(2026, 9, 8, 10, 30, tzinfo=timezone.utc)
+
+        with patch(
+            "services.certificate.collect_hardware_snapshot",
+            side_effect=AssertionError("production collector must not run"),
+        ) as collector:
+            path = generate_hardware_report(
+                "secure",
+                output_dir=output_dir,
+                generated_at=generated_at,
+                development_mode=True,
+            )
+        collector.assert_not_called()
+
+        self.assertTrue(path.name.startswith("reboot_development_simulation_"))
+        raw = path.read_bytes()
+        self.assertIn(
+            b"DEVELOPMENT SIMULATION - NOT A REAL HARDWARE REPORT",
+            raw,
+        )
+        self.assertIn(b"Development simulation - erasure not performed", raw)
+        self.assertIn(b"SIMULATED-DISK-SERIAL", raw)
+        self.assertIn(b"Simulated AMD64 PC", raw)
+        self.assertIn(b"512.0 GB \\(simulated\\)", raw)
+        for forbidden in (b"Apple", b"Darwin", b"macOS", b"MacBook", b"Mac mini"):
+            self.assertNotIn(forbidden, raw)
+
+        report = build_report_data(
+            "secure",
+            snapshot=create_development_snapshot(),
+            generated_at=generated_at,
+        )
+        content = _build_report_content(report)
+        self.assertTrue(report["simulated"])
+        self.assertEqual(report["analysis_results"]["Report ID"], "SIMULATED-REPORT-ID")
+        self.assertGreaterEqual(report["minimum_content_y"], SAFE_BOTTOM_MARGIN)
+        self.assertIn("Development Simulation Report", content)
+
+    def test_normal_injected_linux_snapshot_is_not_labeled_simulation(self):
+        report = build_report_data(
+            "quick",
+            snapshot=self.collect(),
+            generated_at=datetime(2026, 9, 8, 10, 45, tzinfo=timezone.utc),
+            report_id="REAL-FIXTURE-REPORT",
+        )
+        content = _build_report_content(report)
+
+        self.assertFalse(report["simulated"])
+        self.assertEqual(report["report_title"], "Data Erasure Report")
+        self.assertEqual(
+            report["analysis_results"]["Status"],
+            "Analysis only - erasure not performed",
+        )
+        self.assertNotIn("DEVELOPMENT SIMULATION", content)
 
     def test_header_text_and_wordmark_share_visual_center(self):
         geometry = header_alignment_geometry()
@@ -465,6 +561,74 @@ class HardwareReportTests(unittest.TestCase):
                     "Linux x86-64 only",
                 )
                 opener.assert_not_called()
+
+    def test_development_mode_propagates_through_every_route(self):
+        checkbox = SimpleNamespace(isChecked=lambda: True)
+
+        welcome_hardware = SimpleNamespace(
+            development_mode_checkbox=checkbox,
+            close=Mock(),
+        )
+        with patch("ui.welcome.HardwareScreen") as hardware_factory:
+            hardware_factory.return_value.show = Mock()
+            WelcomeScreen.open_hardware_screen(welcome_hardware)
+        hardware_factory.assert_called_once_with(development_mode=True)
+
+        welcome_erase = SimpleNamespace(
+            development_mode_checkbox=checkbox,
+            close=Mock(),
+        )
+        with patch("ui.welcome.SecureEraseScreen") as erase_factory:
+            erase_factory.return_value.show = Mock()
+            WelcomeScreen.secure_erase_only(welcome_erase)
+        erase_factory.assert_called_once_with(
+            previous_screen=welcome_erase,
+            install_os=False,
+            development_mode=True,
+        )
+
+        hardware = SimpleNamespace(development_mode=True, close=Mock())
+        with patch("core.hardware.RecommendationScreen") as recommendation_factory:
+            recommendation_factory.return_value.show = Mock()
+            HardwareScreen.go_to_recommendation(hardware)
+        recommendation_factory.assert_called_once_with(development_mode=True)
+
+        recommendation = SimpleNamespace(
+            development_mode=True,
+            install_os=True,
+            close=Mock(),
+        )
+        with patch("core.recommendation.SecureEraseScreen") as secure_factory:
+            secure_factory.return_value.show = Mock()
+            RecommendationScreen.continue_clicked(recommendation)
+        secure_factory.assert_called_once_with(
+            previous_screen=recommendation,
+            install_os=True,
+            development_mode=True,
+        )
+
+        secure = SimpleNamespace(
+            development_mode=True,
+            install_os=True,
+            wipe_method="secure",
+            asset_id_input=SimpleNamespace(text=lambda: "SIM-ASSET"),
+            operator_name_input=SimpleNamespace(text=lambda: "Developer"),
+            chassis_type_combo=SimpleNamespace(currentText=lambda: "Desktop"),
+        )
+        with patch(
+            "core.secure_erase.generate_hardware_report",
+            return_value=ROOT / "artifacts/simulated.pdf",
+        ) as generator, patch("core.secure_erase.open_certificate"):
+            SecureEraseScreen.perform_wipe(secure)
+        generator.assert_called_once_with(
+            "secure",
+            {
+                "asset_id": "SIM-ASSET",
+                "operator_name": "Developer",
+                "chassis_type": "Desktop",
+            },
+            development_mode=True,
+        )
 
     def test_generator_writes_to_requested_project_artifact_directory(self):
         output_dir = ROOT / "artifacts/test-output"

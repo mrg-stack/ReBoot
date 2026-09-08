@@ -11,15 +11,16 @@ from PySide6.QtCore import Qt, QTimer
 from core.recommendation import RecommendationScreen
 from services.hardware_report import UnsupportedPlatformError
 from services.system_info import get_system_info
-from ui.ui_config import apply_window_mode, PRIMARY_COLOR, TEXT_COLOR
+from ui.ui_config import apply_window_mode, PRIMARY_COLOR, ACCENT_COLOR, TEXT_COLOR
 
 
 class HardwareScreen(QWidget):
     # Collect and present system specifications to the user.
 
-    def __init__(self):
+    def __init__(self, development_mode=False):
         super().__init__()
 
+        self.development_mode = bool(development_mode)
         apply_window_mode(self, "ReBoot - Hardware Analysis")
 
         self.layout = QVBoxLayout()
@@ -32,6 +33,8 @@ class HardwareScreen(QWidget):
         self.status_label.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {PRIMARY_COLOR};")
 
         self.layout.addWidget(self.status_label)
+        if self.development_mode:
+            self.add_development_warning()
         self.setLayout(self.layout)
 
         # Delay avoids instant flash from loading -> results on fast machines.
@@ -40,7 +43,7 @@ class HardwareScreen(QWidget):
     def load_hardware_info(self):
         # Fetch system info and replace loading state with detailed specs.
         try:
-            info = get_system_info()
+            info = get_system_info(development_mode=self.development_mode)
         except UnsupportedPlatformError as error:
             self.clear_layout()
             title = QLabel("Unsupported Runtime")
@@ -63,7 +66,11 @@ class HardwareScreen(QWidget):
         # Reuse the same screen and replace loading widgets with result widgets.
         self.clear_layout()
 
-        title = QLabel("System Analysis Complete")
+        title = QLabel(
+            "Simulated System Analysis Complete"
+            if self.development_mode
+            else "System Analysis Complete"
+        )
         title.setAlignment(Qt.AlignCenter)
         title.setStyleSheet(f"font-size: 22px; font-weight: bold; color: {PRIMARY_COLOR};")
 
@@ -79,6 +86,8 @@ class HardwareScreen(QWidget):
             label.setStyleSheet(f"font-size: 14px; color: {TEXT_COLOR};")
 
         self.layout.addWidget(title)
+        if self.development_mode:
+            self.add_development_warning()
         self.layout.addWidget(cpu_model_label)
         self.layout.addWidget(cpu_arch_label)
         self.layout.addWidget(cpu_cores_label)
@@ -93,7 +102,9 @@ class HardwareScreen(QWidget):
 
     def go_to_recommendation(self):
         # Open recommendation screen and close hardware analysis screen.
-        self.recommendation_screen = RecommendationScreen()
+        self.recommendation_screen = RecommendationScreen(
+            development_mode=self.development_mode
+        )
         self.recommendation_screen.show()
         self.close()
 
@@ -104,3 +115,12 @@ class HardwareScreen(QWidget):
             widget = item.widget()
             if widget:
                 widget.deleteLater()
+
+    def add_development_warning(self):
+        warning = QLabel(
+            "Developer simulation active — fictional data only; no real hardware analyzed."
+        )
+        warning.setWordWrap(True)
+        warning.setAlignment(Qt.AlignCenter)
+        warning.setStyleSheet(f"font-size: 13px; color: {ACCENT_COLOR};")
+        self.layout.addWidget(warning)

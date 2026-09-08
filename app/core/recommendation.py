@@ -9,15 +9,16 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QRadioButton
 from PySide6.QtCore import Qt
 from core.secure_erase import SecureEraseScreen
-from ui.ui_config import apply_window_mode, PRIMARY_COLOR, TEXT_COLOR
+from ui.ui_config import apply_window_mode, PRIMARY_COLOR, ACCENT_COLOR, TEXT_COLOR
 
 
 class RecommendationScreen(QWidget):
     # Show recommendation summary and capture distro preference.
 
-    def __init__(self, plan=None):
+    def __init__(self, plan=None, development_mode=False):
         super().__init__()
 
+        self.development_mode = bool(development_mode)
         # Default path is beginner-friendly install until user changes option.
         self.selected_distro = "mint"
         self.install_os = True
@@ -41,6 +42,16 @@ class RecommendationScreen(QWidget):
         profile = QLabel("Suggested profile: Developer")
         profile.setAlignment(Qt.AlignCenter)
         profile.setStyleSheet(f"font-size: 14px; color: {TEXT_COLOR};")
+
+        simulation_warning = QLabel(
+            "Developer simulation active — recommendations use fictional hardware data."
+        )
+        simulation_warning.setWordWrap(True)
+        simulation_warning.setAlignment(Qt.AlignCenter)
+        simulation_warning.setStyleSheet(
+            f"font-size: 13px; color: {ACCENT_COLOR};"
+        )
+        simulation_warning.setVisible(self.development_mode)
 
         # Keep spacing between recommendation summary and user choice section.
         choice_title = QLabel("Choose your experience")
@@ -84,6 +95,7 @@ class RecommendationScreen(QWidget):
         layout.addWidget(title)
         layout.addWidget(self.suggestion)
         layout.addWidget(profile)
+        layout.addWidget(simulation_warning)
         layout.addSpacing(12)
         layout.addWidget(choice_title)
         layout.addWidget(self.easy_radio)
@@ -123,6 +135,10 @@ class RecommendationScreen(QWidget):
 
     def continue_clicked(self):
         # Open secure erase step and hide the recommendation screen.
-        self.secure_erase_screen = SecureEraseScreen(previous_screen=self, install_os=self.install_os)
+        self.secure_erase_screen = SecureEraseScreen(
+            previous_screen=self,
+            install_os=self.install_os,
+            development_mode=self.development_mode,
+        )
         self.secure_erase_screen.show()
         self.close()

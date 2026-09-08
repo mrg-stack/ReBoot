@@ -6,6 +6,7 @@ from services.hardware_report import (
     CommandRunner,
     HardwareSnapshot,
     collect_hardware_snapshot,
+    create_development_snapshot,
     run_command,
 )
 
@@ -15,23 +16,31 @@ def get_system_info(
     machine: str | None = None,
     runner: CommandRunner = run_command,
     root: Path = Path("/"),
-) -> dict[str, str]:
-    """Collect the normalized production hardware summary.
+    *,
+    development_mode: bool = False,
+    snapshot: HardwareSnapshot | None = None,
+) -> dict[str, str | bool]:
+    """Return a normalized production or explicitly simulated summary.
 
     Unsupported operating systems and architectures raise
     ``UnsupportedPlatformError`` from the report collector instead of
     returning misleading placeholder or host-specific data.
     """
-    snapshot = collect_hardware_snapshot(
-        os_name=os_name,
-        machine=machine,
-        runner=runner,
-        root=root,
-    )
-    return system_info_from_snapshot(snapshot)
+    if development_mode:
+        if snapshot is not None and not snapshot.simulated:
+            raise ValueError("development_mode requires a simulated hardware snapshot")
+        hardware = snapshot or create_development_snapshot()
+    else:
+        hardware = snapshot or collect_hardware_snapshot(
+            os_name=os_name,
+            machine=machine,
+            runner=runner,
+            root=root,
+        )
+    return system_info_from_snapshot(hardware)
 
 
-def system_info_from_snapshot(snapshot: HardwareSnapshot) -> dict[str, str]:
+def system_info_from_snapshot(snapshot: HardwareSnapshot) -> dict[str, str | bool]:
     disk = snapshot.first_disk()
     disk_text = disk.capacity if disk else snapshot.disk_probe.display()
     cpu_model = snapshot.field("processor").display()
@@ -48,6 +57,7 @@ def system_info_from_snapshot(snapshot: HardwareSnapshot) -> dict[str, str]:
         "cpu_speed": cpu_speed,
         "ram": snapshot.field("memory").display(),
         "disk": disk_text,
+        "simulated": snapshot.simulated,
     }
 
 

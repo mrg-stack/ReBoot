@@ -81,6 +81,7 @@ class HardwareSnapshot:
     fields: dict[str, Evidence] = field(default_factory=dict)
     disks: list[DiskInfo] = field(default_factory=list)
     disk_probe: Evidence = field(default_factory=lambda: unavailable("not probed"))
+    simulated: bool = False
 
     def field(self, name: str) -> Evidence:
         return self.fields.get(name, unavailable("not collected"))
@@ -174,6 +175,68 @@ def collect_hardware_snapshot(
         )
     architecture = normalize_machine(machine or platform.machine())
     return _collect_linux(runner, root, architecture)
+
+
+def create_development_snapshot() -> HardwareSnapshot:
+    """Return deterministic fictional hardware without probing the host."""
+    fields = {
+        "manufacturer": detected("ReBoot Development Fixture"),
+        "chassis_type": detected("Simulated Desktop"),
+        "model": detected("Simulated AMD64 PC"),
+        "machine_name": detected("Simulated AMD64 PC"),
+        "serial": detected("SIMULATED-SYSTEM-SERIAL"),
+        "uuid": detected("SIMULATED-SYSTEM-UUID"),
+        "sku": detected("SIMULATED-PC-SKU"),
+        "processor": detected("Simulated x86-64 Processor"),
+        "cpu_cores": detected("4 simulated physical cores"),
+        "cpu_threads": detected("8 simulated logical threads"),
+        "cpu_speed": detected("3.20 GHz (simulated)"),
+        "memory": detected("16.0 GB (simulated)"),
+        "motherboard": detected("ReBoot Simulated Mainboard"),
+        "bios": detected("ReBoot Simulated UEFI Firmware 1.0"),
+        "bios_features": detected("Simulated UEFI boot; Simulated Secure Boot enabled"),
+        "security_module": detected("Simulated TPM 2.0"),
+        "graphics": detected("ReBoot Simulated Graphics Adapter"),
+        "displays": detected("Simulated Display: 1920x1080"),
+        "audio": detected("ReBoot Simulated HD Audio"),
+        "audio_input": detected("Simulated Microphone"),
+        "audio_output": detected("Simulated Speakers"),
+        "cameras": detected("Simulated Webcam"),
+        "battery": detected("Simulated Battery, capacity: 90%, status: Not tested"),
+        "thunderbolt": detected("Simulated USB4 Host Interface"),
+        "networks": detected(
+            "Simulated Ethernet [simeth0, up]; Simulated Wi-Fi [simwifi0, down]"
+        ),
+        "wifi": detected("Simulated Wi-Fi [simwifi0, down]"),
+        "usb_devices": detected(
+            "Simulated USB Keyboard; Simulated USB Mouse; Simulated USB Storage"
+        ),
+        "ports": detected("Simulated USB controller; Simulated USB4 controller"),
+        "storage_controller": detected("Simulated NVMe Controller"),
+        "keyboard": detected("Simulated USB Keyboard"),
+        "pointer": detected("Simulated USB Mouse"),
+        "optical_drive": detected("Simulated DVD-RW Drive"),
+    }
+    disk = DiskInfo(
+        name="/dev/simulated-nvme0n1",
+        model="Simulated NVMe SSD",
+        serial="SIMULATED-DISK-SERIAL",
+        capacity_bytes=512_000_000_000,
+        transport="NVMe (simulated)",
+        logical_sector_size=512,
+        vendor="ReBoot Development Fixture",
+        health="Simulated healthy status (not tested)",
+        revision="SIM-1.0",
+        removable="removable: No (simulated)",
+    )
+    return HardwareSnapshot(
+        os_name="Linux",
+        architecture="x86_64",
+        simulated=True,
+        fields=fields,
+        disks=[disk],
+        disk_probe=detected("1 simulated disk"),
+    )
 
 
 def _collect_linux(

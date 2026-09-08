@@ -1,9 +1,16 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QLabel,
+)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QFont, QFontMetrics, QColor, QLinearGradient
 from ui.hardware import HardwareScreen
 from ui.secure_erase import SecureEraseScreen
-from ui.ui_config import apply_window_mode, TEXT_COLOR
+from ui.ui_config import apply_window_mode, ACCENT_COLOR, TEXT_COLOR
 
 
 class _ReBootLogo(QWidget):
@@ -125,8 +132,30 @@ class WelcomeScreen(QWidget):
         custom_btn.clicked.connect(self.custom_setup)
         erase_only_btn.clicked.connect(self.secure_erase_only)
 
+        self.development_mode_checkbox = QCheckBox(
+            "Developer mode — simulate an AMD64 Linux PC"
+        )
+        self.development_mode_checkbox.setChecked(False)
+        self.development_mode_checkbox.setStyleSheet("font-size: 13px;")
+
+        self.development_mode_warning = QLabel(
+            "Simulated data only: no real hardware is analyzed, no erasure is performed, "
+            "and reports are not valid evidence."
+        )
+        self.development_mode_warning.setWordWrap(True)
+        self.development_mode_warning.setAlignment(Qt.AlignCenter)
+        self.development_mode_warning.setStyleSheet(
+            f"font-size: 13px; color: {ACCENT_COLOR};"
+        )
+        self.development_mode_warning.setVisible(False)
+        self.development_mode_checkbox.toggled.connect(
+            self.development_mode_warning.setVisible
+        )
+
         layout.addLayout(logo_row)
         layout.addWidget(subtitle)
+        layout.addWidget(self.development_mode_checkbox)
+        layout.addWidget(self.development_mode_warning)
         layout.addWidget(quick_btn)
         layout.addWidget(custom_btn)
         layout.addWidget(erase_only_btn)
@@ -143,12 +172,18 @@ class WelcomeScreen(QWidget):
 
     def secure_erase_only(self):
         """Open secure erase flow directly without OS installation intent."""
-        self.secure_erase_screen = SecureEraseScreen(previous_screen=self, install_os=False)
+        self.secure_erase_screen = SecureEraseScreen(
+            previous_screen=self,
+            install_os=False,
+            development_mode=self.development_mode_checkbox.isChecked(),
+        )
         self.secure_erase_screen.show()
         self.close()
 
     def open_hardware_screen(self):
         """Open hardware analysis and close the welcome screen."""
-        self.hardware_screen = HardwareScreen()
+        self.hardware_screen = HardwareScreen(
+            development_mode=self.development_mode_checkbox.isChecked()
+        )
         self.hardware_screen.show()
         self.close()
